@@ -24,6 +24,7 @@ return array(
     'Confirm_Accessory_Checkin' => 'Confirm Accessory Checkin.',
     'Confirm_accessory_delivery' => 'Confirm accessory delivery.',
     'Confirm_asset_delivery' => 'Confirm asset delivery.',
+    'asset_assignment' => 'Asset assigned to you.',
     'Confirm_consumable_delivery' => 'Confirm consumable delivery.',
     'current_QTY' => 'Current QTY',
     'Days' => 'Days',
@@ -71,4 +72,5 @@ return array(
     'welcome' => 'Welcome :name',
     'welcome_to' => 'Welcome to :web!',
     'your_credentials' => 'Your Snipe-IT credentials',
+    'assignment_reminder' => 'Please ensure that the asset has been removed from your account when you check it in.',
 );

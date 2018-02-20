@@ -94,45 +94,55 @@ class Asset extends Depreciable
         if (!$user) {
             return false;
         }
-
         if ($expected_checkin) {
             $this->expected_checkin = $expected_checkin;
         }
-
         $this->last_checkout = $checkout_at;
-
         $this->assigneduser()->associate($user);
-
         if($name != null)
         {
             $this->name = $name;
         }
-
         $settings = Setting::getSettings();
-
         if ($this->requireAcceptance()) {
             $this->accepted="pending";
         }
-
-
-
         if ($this->save()) {
-
             // $action, $admin, $user, $expected_checkin = null, $note = null, $checkout_at = null
             $log = $this->createLogRecord('checkout', $this, $admin, $user, $expected_checkin, $note, $checkout_at);
+            /**
+             * notify user that we have assigned the item to them
+             * @TODO: make this configurable
+             **/
+            $this->sendCheckOutAssignmentMail($log->id, $user, $checkout_at, $expected_checkin, $note);
 
             if ((($this->requireAcceptance()=='1')  || ($this->getEula())) && ($user->email!='')) {
                 $this->checkOutNotifyMail($log->id, $user, $checkout_at, $expected_checkin, $note);
             }
-
             if ($settings->slack_endpoint) {
                 $this->checkOutNotifySlack($settings, $admin, $note);
             }
             return true;
-
         }
         return false;
+    }
 
+    public function sendCheckOutAssignmentMail($log_id, $user, $checkout_at, $expected_checkin, $note)
+    {
+        $data['log_id'] = $log_id;
+        $data['first_name'] = $user->first_name;
+        $data['item_name'] = $this->showAssetName();
+        $data['checkout_date'] = $checkout_at;
+        $data['expected_checkin'] = $expected_checkin;
+        $data['item_tag'] = $this->asset_tag;
+        $data['note'] = $note;
+        $data['item_serial'] = $this->serial;
+
+        \Mail::send('emails.assignment-mail', $data, function ($m) use ($user) {
+            $m->to($user->email, $user->first_name . ' ' . $user->last_name);
+            $m->replyTo(config('mail.reply_to.address'), config('mail.reply_to.name'));
+            $m->subject(trans('mail.asset_assignment'));
+        });
     }
 
     public function checkOutNotifyMail($log_id, $user, $checkout_at, $expected_checkin, $note)
@@ -147,31 +157,24 @@ class Asset extends Depreciable
         $data['note'] = $note;
         $data['item_serial'] = $this->serial;
         $data['require_acceptance'] = $this->requireAcceptance();
-
         if ((($this->requireAcceptance()=='1')  || ($this->getEula())) && (!config('app.lock_passwords'))) {
-
             \Mail::send('emails.accept-asset', $data, function ($m) use ($user) {
                 $m->to($user->email, $user->first_name . ' ' . $user->last_name);
                 $m->replyTo(config('mail.reply_to.address'), config('mail.reply_to.name'));
                 $m->subject(trans('mail.Confirm_asset_delivery'));
             });
         }
-
     }
 
     public function checkOutNotifySlack($settings, $admin, $note = null)
     {
-
         if ($settings->slack_endpoint) {
-
             $slack_settings = [
             'username' => $settings->botname,
             'channel' => $settings->slack_channel,
             'link_names' => true
             ];
-
             $client = new \Maknz\Slack\Client($settings->slack_endpoint, $slack_settings);
-
             try {
                 $client->attach([
                 'color' => 'good',
@@ -186,14 +189,11 @@ class Asset extends Depreciable
                 ],
                   ]
                 ])->send('Asset Checked Out');
-
             } catch (Exception $e) {
                 LOG::error($e);
             }
         }
-
     }
-
 
     public function getDetailedNameAttribute()
     {
@@ -212,7 +212,6 @@ class Asset extends Depreciable
 
     public function createLogRecord($action, $asset, $admin, $user, $expected_checkin = null, $note = null, $checkout_at = null)
     {
-
         $logaction = new Actionlog();
         $logaction->item_type = Asset::class;
         $logaction->item_id = $this->id;
@@ -226,7 +225,6 @@ class Asset extends Depreciable
         } else {
             $logaction->created_at = \Carbon\Carbon::now();
         }
-
         if ($action=="checkout") {
             if ($user) {
                 $logaction->location_id = $user->location_id;
@@ -237,7 +235,6 @@ class Asset extends Depreciable
         }
         $logaction->user()->associate($admin);
         $log = $logaction->logaction($action);
-
         return $logaction;
     }
 
@@ -271,7 +268,6 @@ class Asset extends Depreciable
    */
     public function uploads()
     {
-
         return $this->hasMany('\App\Models\Actionlog', 'item_id')
                   ->where('item_type', '=', Asset::class)
                   ->where('action_type', '=', 'uploaded')
@@ -284,7 +280,6 @@ class Asset extends Depreciable
         return $this->belongsTo('\App\Models\User', 'assigned_to')
                   ->withTrashed();
     }
-
   /**
    * Get the asset's location based on the assigned user
    **/
@@ -296,7 +291,6 @@ class Asset extends Depreciable
             return $this->belongsTo('\App\Models\Location', 'rtd_location_id');
         }
     }
-
   /**
    * Get the asset's location based on default RTD location
    **/

@@ -543,16 +543,16 @@ class AssetsController extends Controller
     }
 
     /**
-    * Validate and process the form data to check out an asset to a user.
-    *
-    * @author [A. Gianotto] [<snipe@snipe.net>]
-    * @param int $assetId
-    * @since [v1.0]
-    * @return Redirect
-    */
+     * Validate and process the form data to check out an asset to a user.
+     *
+     * @author [A. Gianotto] [<snipe@snipe.net>]
+     * @param AssetCheckoutRequest $request
+     * @param int $assetId
+     * @return Redirect
+     * @since [v1.0]
+     */
     public function postCheckout(AssetCheckoutRequest $request, $assetId)
     {
-
         // Check if the asset exists
         if (!$asset = Asset::find($assetId)) {
             return redirect()->to('hardware')->with('error', trans('admin/hardware/message.does_not_exist'));
@@ -561,33 +561,25 @@ class AssetsController extends Controller
         } elseif (!$asset->availableForCheckout()) {
             return redirect()->to('hardware')->with('error', trans('admin/hardware/message.checkout.not_available'));
         }
-
         $user = User::find(e(Input::get('assigned_to')));
         $admin = Auth::user();
-
         if ((Input::has('checkout_at')) && (Input::get('checkout_at')!= date("Y-m-d"))) {
             $checkout_at = e(Input::get('checkout_at'));
         } else {
             $checkout_at = date("Y-m-d H:i:s");
         }
-
         if (Input::has('expected_checkin')) {
             $expected_checkin = e(Input::get('expected_checkin'));
         } else {
             $expected_checkin = '';
         }
-
-
-        if ($asset->checkOutToUser($user, $admin, $checkout_at, $expected_checkin, e(Input::get('note')), e(Input::get('name')))) {
+        if ($asset->checkOutToUser($user, $admin,$checkout_at, $expected_checkin, e(Input::get('note')), e(Input::get('name')))) {
           // Redirect to the new asset page
             return redirect()->to("hardware")->with('success', trans('admin/hardware/message.checkout.success'));
         }
-
       // Redirect to the asset management page with error
         return redirect()->to("hardware/$assetId/checkout")->with('error', trans('admin/hardware/message.checkout.error'))->withErrors($asset->getErrors());
     }
-
-
     /**
     * Returns a view that presents a form to check an asset back into inventory.
     *
@@ -628,7 +620,6 @@ class AssetsController extends Controller
         } elseif (!Company::isCurrentUserHasAccess($asset)) {
             return redirect()->to('hardware')->with('error', trans('general.insufficient_permissions'));
         }
-
         $admin = Auth::user();
 
         if (!is_null($asset->assigned_to)) {
@@ -636,7 +627,6 @@ class AssetsController extends Controller
         } else {
             return redirect()->to('hardware')->with('error', trans('admin/hardware/message.checkin.already_checked_in'));
         }
-
         // This is just used for the redirect
         $return_to = $asset->assigned_to;
         $asset->expected_checkin = null;
@@ -659,20 +649,15 @@ class AssetsController extends Controller
             }
             //$checkin_at = e(Input::get('checkin_at'));
             $logaction = $asset->createLogRecord('checkin', $asset, $admin, $user, null, e(Input::get('note')), $checkin_at);
-
-
             $settings = Setting::getSettings();
 
             if ($settings->slack_endpoint) {
-
                 $slack_settings = [
                     'username' => $settings->botname,
                     'channel' => $settings->slack_channel,
                     'link_names' => true
                 ];
-
                 $client = new \Maknz\Slack\Client($settings->slack_endpoint, $slack_settings);
-
                 try {
                         $client->attach([
                             'color' => 'good',
@@ -685,14 +670,12 @@ class AssetsController extends Controller
                                     'title' => 'Note:',
                                     'value' => e($logaction->note)
                                 ],
-
                             ]
                         ])->send('Asset Checked In');
 
                 } catch (Exception $e) {
 
                 }
-
             }
 
             $data['log_id'] = $logaction->id;
@@ -751,13 +734,9 @@ class AssetsController extends Controller
             } else {
                 $use_currency = trans('general.currency');
             }
-
         }
 
         if (isset($asset->id)) {
-
-
-
             $qr_code = (object) array(
                 'display' => $settings->qr_code == '1',
                 'url' => route('qr_code/hardware', $asset->id)
@@ -785,7 +764,6 @@ class AssetsController extends Controller
     public function getQrCode($assetId = null)
     {
         $settings = Setting::getSettings();
-
         if ($settings->qr_code == '1') {
             $asset = Asset::find($assetId);
             $size = Helper::barcodeDimensions($settings->barcode_type);
@@ -802,10 +780,8 @@ class AssetsController extends Controller
                     file_put_contents($qr_file, $barcode_obj->getPngData());
                     return response($barcode_obj->getPngData())->header('Content-type', 'image/png');
                 }
-
             }
         }
-
     }
 
 
@@ -819,11 +795,9 @@ class AssetsController extends Controller
      */
     public function getBarCode($assetId = null)
     {
-
         $settings = Setting::getSettings();
         $asset = Asset::find($assetId);
         $barcode_file = public_path().'/uploads/barcodes/'.str_slug($settings->alt_barcode).'-'.str_slug($asset->asset_tag).'.png';
-
 
         if (isset($asset->id,$asset->asset_tag)) {
 
@@ -850,10 +824,8 @@ class AssetsController extends Controller
     */
     public function getImportUpload()
     {
-
         $path = config('app.private_uploads').'/imports/assets';
         $files = array();
-
         if (!Company::isCurrentUserAuthorized()) {
             return redirect()->to('hardware')->with('error', trans('general.insufficient_permissions'));
         }
@@ -884,28 +856,24 @@ class AssetsController extends Controller
     }
 
 
-
     /**
-    * Upload the import file via AJAX
-    *
-    * @author [A. Gianotto] [<snipe@snipe.net>]
-    * @since [v2.0]
-    * @return View
-    */
+     * Upload the import file via AJAX
+     *
+     * @author [A. Gianotto] [<snipe@snipe.net>]
+     * @since [v2.0]
+     * @param AssetFileRequest $request
+     * @return View
+     */
     public function postAPIImportUpload(AssetFileRequest $request)
     {
-
         if (!Company::isCurrentUserAuthorized()) {
             return redirect()->to('hardware')->with('error', trans('general.insufficient_permissions'));
 
         } elseif (!config('app.lock_passwords')) {
-
             $files = Input::file('files');
             $path = config('app.private_uploads').'/imports/assets';
             $results = array();
-
             foreach ($files as $file) {
-
                 if (!in_array($file->getMimeType(), array(
                     'application/vnd.ms-excel',
                     'text/csv',
@@ -936,16 +904,10 @@ class AssetsController extends Controller
                 'files' => $results
             );
 
-
-
-
         } else {
             $results['error']=trans('general.feature_disabled');
             return $results;
         }
-
-
-
     }
 
     public function getDeleteImportFile($filename)
@@ -1076,7 +1038,6 @@ class AssetsController extends Controller
      */
     public function getImportHistory()
     {
-
         return View::make('hardware/history');
     }
 
@@ -1088,15 +1049,14 @@ class AssetsController extends Controller
      *
      * @author [A. Gianotto] [<snipe@snipe.net>]
      * @since [v3.3]
+     * @param Request $request
      * @return View
      */
     public function postImportHistory(Request $request)
     {
-
         if (!ini_get("auto_detect_line_endings")) {
             ini_set("auto_detect_line_endings", '1');
         }
-
         $assets = Asset::all(['asset_tag']);
 
         $csv = Reader::createFromPath(Input::file('user_import_csv'));
