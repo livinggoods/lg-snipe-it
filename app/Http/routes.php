@@ -8,6 +8,9 @@ use App\Models\Statuslabel;
 | Admin API Routes
 |--------------------------------------------------------------------------
 */
+
+Route::get('phones',['as'=>'phones','uses'=>'PhonesController@index']);
+
 Route::group([ 'prefix' => 'api', 'middleware' => 'auth' ], function () {
 
     /*---Hardware API---*/

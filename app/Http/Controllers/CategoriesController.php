@@ -59,26 +59,25 @@ class CategoriesController extends Controller
 
 
     /**
-    * Validates and stores the new category data.
-    *
-    * @author [A. Gianotto] [<snipe@snipe.net>]
-    * @see CategoriesController::getCreate() method that makes the form.
-    * @since [v1.0]
-    * @return Redirect
-    */
+     * Validates and stores the new category data.
+     *
+     * @author [A. Gianotto] [<snipe@snipe.net>]
+     * @see CategoriesController::getCreate() method that makes the form.
+     * @since [v1.0]
+     * @return Redirect
+     */
     public function postCreate()
     {
-
         // create a new model instance
         $category = new Category();
-
         // Update the category data
         $category->name                 = e(Input::get('name'));
         $category->category_type        = e(Input::get('category_type'));
         $category->eula_text            = e(Input::get('eula_text'));
         $category->use_default_eula     = e(Input::get('use_default_eula', '0'));
         $category->require_acceptance   = e(Input::get('require_acceptance', '0'));
-        $category->checkin_email        = e(Input::get('checkin_email', '0'));
+        $category->checkin_email        = e(Input::get('checkin_email', '1'));
+        $category->checkout_email        = e(Input::get('checkout_email', '1'));
         $category->user_id              = Auth::user()->id;
 
         if ($category->save()) {
@@ -127,14 +126,15 @@ class CategoriesController extends Controller
 
 
     /**
-    * Validates and stores the updated category data.
-    *
-    * @author [A. Gianotto] [<snipe@snipe.net>]
-    * @see CategoriesController::getEdit() method that makes the form.
-    * @param int $categoryId
-    * @since [v1.0]
-    * @return Redirect
-    */
+     * Validates and stores the updated category data.
+     *
+     * @author [A. Gianotto] [<snipe@snipe.net>]
+     * @see CategoriesController::getEdit() method that makes the form.
+     * @param Request $request
+     * @param int $categoryId
+     * @return Redirect
+     * @since [v1.0]
+     */
     public function postEdit(Request $request, $categoryId = null)
     {
         // Check if the blog post exists
@@ -151,7 +151,8 @@ class CategoriesController extends Controller
         $category->eula_text            = e($request->input('eula_text'));
         $category->use_default_eula     = e($request->input('use_default_eula', '0'));
         $category->require_acceptance   = e($request->input('require_acceptance', '0'));
-        $category->checkin_email        = e($request->input('checkin_email', '0'));
+        $category->checkin_email        = e($request->input('checkin_email', 0));
+        $category->checkout_email        = e(Input::get('checkout_email', 0));
 
         if ($category->save()) {
         // Redirect to the new category page
@@ -161,10 +162,8 @@ class CategoriesController extends Controller
           // The given data did not pass validation
             return redirect()->back()->withInput()->withErrors($category->getErrors());
         }
-
         // Redirect to the category management page
         return redirect()->back()->with('error', trans('admin/categories/message.update.error'));
-
     }
 
     /**
@@ -205,8 +204,6 @@ class CategoriesController extends Controller
 
 
     }
-
-
 
     /**
     * Returns a view that invokes the ajax tables which actually contains

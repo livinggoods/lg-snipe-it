@@ -437,8 +437,6 @@ class AssetModelsController extends Controller
         } else {
             $limit = 50;
         }
-
-
         $allowed_columns = ['id','name','model_number'];
         $order = Input::get('order') === 'asc' ? 'asc' : 'desc';
         $sort = in_array(Input::get('sort'), $allowed_columns) ? e(Input::get('sort')) : 'created_at';

@@ -114,8 +114,9 @@ class Asset extends Depreciable
              * notify user that we have assigned the item to them
              * @TODO: make this configurable
              **/
-            $this->sendCheckOutAssignmentMail($log->id, $user, $checkout_at, $expected_checkin, $note);
-
+            if($this->requireCheckoutMail() == true){
+                $this->sendCheckOutAssignmentMail($log->id, $user, $checkout_at, $expected_checkin, $note);
+            }
             if ((($this->requireAcceptance()=='1')  || ($this->getEula())) && ($user->email!='')) {
                 $this->checkOutNotifyMail($log->id, $user, $checkout_at, $expected_checkin, $note);
             }
@@ -237,8 +238,6 @@ class Asset extends Depreciable
         $log = $logaction->logaction($action);
         return $logaction;
     }
-
-
     /**
    * Set depreciation relationship
    */
@@ -511,22 +510,20 @@ public function checkin_email()
     {
         return $this->model->category->require_acceptance;
     }
-
+    public function requireCheckoutMail(){
+        return $this->model->category->checkout_email;
+        }
     public function getEula()
     {
-
         $Parsedown = new \Parsedown();
-
         if ($this->model->category->eula_text) {
             return $Parsedown->text(e($this->model->category->eula_text));
-        } elseif ($this->model->category->use_default_eula == '1') {
+        } elseif ($this->model->category->use_default_eula == 1) {
             return $Parsedown->text(e(Setting::getSettings()->default_eula_text));
         } else {
             return null;
         }
-
     }
-
 
   /**
    * -----------------------------------------------
@@ -544,7 +541,6 @@ public function checkin_email()
 
     public function scopeHardware($query)
     {
-
         return $query->where('physical', '=', '1');
     }
 
@@ -558,15 +554,12 @@ public function checkin_email()
 
     public function scopePending($query)
     {
-
         return $query->whereHas('assetstatus', function ($query) {
-
             $query->where('deployable', '=', 0)
                 ->where('pending', '=', 1)
                 ->where('archived', '=', 0);
         });
     }
-
 
     /**
     * Query builder scope for pending assets
@@ -591,7 +584,6 @@ public function checkin_email()
         });
     }
 
-
     /**
     * Query builder scope for RTD assets
     *
@@ -602,13 +594,11 @@ public function checkin_email()
 
     public function scopeRTD($query)
     {
-
         return $query->whereNULL('assigned_to')
                    ->whereHas('assetstatus', function ($query) {
-
                        $query->where('deployable', '=', 1)
-                             ->where('pending', '=', 0)
-                             ->where('archived', '=', 0);
+                           ->where('pending', '=', 0)
+                           ->where('archived', '=', 0);
                    });
     }
 
@@ -622,9 +612,7 @@ public function checkin_email()
 
     public function scopeUndeployable($query)
     {
-
         return $query->whereHas('assetstatus', function ($query) {
-
             $query->where('deployable', '=', 0)
                 ->where('pending', '=', 0)
                 ->where('archived', '=', 0);
@@ -641,9 +629,7 @@ public function checkin_email()
 
     public function scopeNotArchived($query)
     {
-
         return $query->whereHas('assetstatus', function ($query) {
-
             $query->where('archived', '=', 0);
         });
     }
@@ -658,9 +644,7 @@ public function checkin_email()
 
     public function scopeArchived($query)
     {
-
         return $query->whereHas('assetstatus', function ($query) {
-
             $query->where('deployable', '=', 0)
                 ->where('pending', '=', 0)
                 ->where('archived', '=', 1);
@@ -677,7 +661,6 @@ public function checkin_email()
 
     public function scopeDeployed($query)
     {
-
         return $query->where('assigned_to', '>', '0');
     }
 
@@ -691,10 +674,8 @@ public function checkin_email()
 
     public function scopeRequestableAssets($query)
     {
-
         return Company::scopeCompanyables($query->where('requestable', '=', 1))
         ->whereHas('assetstatus', function ($query) {
-
             $query->where('deployable', '=', 1)
                  ->where('pending', '=', 0)
                  ->where('archived', '=', 0);
@@ -750,6 +731,7 @@ public function checkin_email()
   *
   * @return Illuminate\Database\Query\Builder          Modified query builder
   */
+
     public function scopeRejected($query)
     {
         return $query->where("accepted", "=", "rejected");
